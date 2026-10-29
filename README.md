@@ -21,10 +21,10 @@
 
 ```powershell
 # 1. 克隆到本地
-git clone https://github.com/<你的用户名>/math-atelier.git
+git clone https://github.com/liubai132/dsh_for_math.git
 
 # 2. 装依赖（引擎随插件打包，只需一次）
-pip install -r math-atelier/plugin/math-atelier/requirements.txt
+pip install -r dsh_for_math/plugin/math-atelier/requirements.txt
 
 # 3. 在 DSH 里安装插件，指向这个目录
 plugin_manager install_bundle  →  <克隆路径>\plugin\math-atelier

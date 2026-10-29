@@ -24,7 +24,17 @@
     "client": {
       "platform": "web",
       "immediately": true,
-      "inject": ["@deepseek-ai/dsh-client-ui-conversation"]
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liubai132/dsh_for_math.git"
+  },
+  "homepage": "https://github.com/liubai132/dsh_for_math#readme",
+  "bugs": {
+    "url": "https://github.com/liubai132/dsh_for_math/issues"
   }
 }
