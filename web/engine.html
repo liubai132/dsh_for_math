@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数学引擎 · 数学工坊</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="onKatexLoaded()"></script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="/"><span class="mark">∑</span>数学工坊</a>
+    <nav class="nav">
+      <a href="/">首页</a>
+      <a href="/engine.html" class="active">数学引擎</a>
+      <a href="/research.html">研究台</a>
+      <a href="/numbers.html">数字剖析</a>
+      <a href="/article.html?slug=primes">文章</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  <section style="padding-bottom:18px">
+    <h1 style="font-size:32px">数学引擎</h1>
+    <p class="lead" style="margin-top:6px;color:var(--muted)">
+      输入一个式子，让 SymPy 替你推。结果是 LaTeX，可以直接复制走。
+    </p>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="grid two" style="align-items:start">
+      <div class="card">
+        <div class="tabs" id="op-tabs"></div>
+
+        <div class="field">
+          <label for="expr">表达式</label>
+          <textarea id="expr" spellcheck="false" placeholder="例如 x^2 - 4"></textarea>
+          <p class="hint" id="op-hint"></p>
+        </div>
+
+        <div id="options" class="row"></div>
+
+        <div class="row" style="margin-top:16px">
+          <button class="btn primary" id="run" style="flex:0 0 auto">计算 ⏎</button>
+          <button class="btn" id="copy" style="flex:0 0 auto;display:none">复制 LaTeX</button>
+          <button class="btn" id="clear" style="flex:0 0 auto">清空</button>
+        </div>
+
+        <div class="field" style="margin-top:20px">
+          <label>试试这些</label>
+          <div class="tabs" id="examples"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="status" id="status">等着你输入表达式。按 Ctrl + Enter 也能直接算。</div>
+        <div id="result-latex" class="result-latex" style="display:none"></div>
+        <div id="result-text" class="result-text"></div>
+        <ul class="notes" id="notes"></ul>
+        <ul class="steps" id="steps"></ul>
+        <canvas id="chart" data-height="320" style="display:none;margin-top:16px"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h3>怎么用命令行调它</h3>
+      <p style="margin-bottom:10px">所有功能都是 HTTP 接口，脚本里可以直接 POST：</p>
+      <pre style="overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;font-size:13px"><code>curl -X POST http://127.0.0.1:8899/api/cas ^
+  -H "Content-Type: application/json" ^
+  -d "{\"op\":\"diff\",\"expr\":\"x^3*sin(x)\",\"order\":2}"</code></pre>
+      <p class="hint">还有 <code>GET /api/number/1729</code>、<code>GET /api/constant/pi?digits=500</code>。</p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span>数学工坊 · 引擎基于 SymPy</span>
+    <span><a href="/api/health">API 状态</a></span>
+  </div>
+</footer>
+
+<script src="/js/common.js"></script>
+<script src="/js/engine.js"></script>
+</body>
+</html>

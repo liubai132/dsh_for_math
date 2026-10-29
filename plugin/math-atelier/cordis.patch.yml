@@ -1,0 +1,3 @@
+- insert:
+    - id: math-atelier
+      name: "@local/math-atelier"

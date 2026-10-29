@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>研究台 · 数学工坊</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="onKatexLoaded()"></script>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .verdict { padding: 14px 18px; border-radius: 12px; font-size: 15px; margin-bottom: 14px; }
+  .verdict.ok { background: var(--accent-soft); border: 1px solid #cfe6e1; color: #0b4f46; }
+  .verdict.bad { background: #fdecea; border: 1px solid #f5c6c0; color: #8a1f14; }
+  .verdict.warn { background: var(--amber-soft); border: 1px solid #f0d9b8; color: #7a4a0c; }
+  .guess { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #fff; }
+  .guess .kind { font-size: 11px; letter-spacing: .1em; color: var(--amber); text-transform: uppercase; }
+  .guess .note { font-size: 12px; color: var(--muted); }
+  table.diff { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; }
+  table.diff th, table.diff td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: right; }
+  table.diff th { color: var(--muted); font-weight: 500; }
+  table.diff td:first-child, table.diff th:first-child { text-align: left; color: var(--muted); }
+  pre.csv { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow-x: auto; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="/"><span class="mark">∑</span>数学工坊</a>
+    <nav class="nav">
+      <a href="/">首页</a>
+      <a href="/engine.html">数学引擎</a>
+      <a href="/research.html" class="active">研究台</a>
+      <a href="/numbers.html">数字剖析</a>
+      <a href="/article.html?slug=primes">文章</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  <section style="padding-bottom:10px">
+    <h1 style="font-size:32px">研究台</h1>
+    <p class="lead" style="margin-top:6px;color:var(--muted)">
+      把猜想变成实验，把计算变成证据。序列识别、常数反推、猜想检验，结果都能导出成 CSV 带进论文或笔记本。
+    </p>
+    <div class="tabs" id="bench-tabs" style="margin-top:18px">
+      <button class="tab active" data-panel="seq">序列分析</button>
+      <button class="tab" data-panel="const">常数识别</button>
+      <button class="tab" data-panel="conj">猜想检验</button>
+      <button class="tab" data-panel="data">数据导出</button>
+    </div>
+  </section>
+
+  <section id="panel-seq" class="panel active" style="padding-top:0">
+    <div class="card">
+      <div class="field">
+        <label for="seq-input">数列（至少 3 项，逗号或空格分隔）</label>
+        <textarea id="seq-input" spellcheck="false" style="min-height:64px">1, 1, 2, 3, 5, 8, 13, 21</textarea>
+      </div>
+      <div class="row" style="align-items:center">
+        <label class="hint" style="flex:1 1 auto;display:flex;gap:8px;align-items:center;margin:0">
+          <input type="checkbox" id="seq-oeis" checked> 同时查 OEIS（需要联网）
+        </label>
+        <button id="seq-run" class="btn primary" style="flex:0 0 auto">分析 →</button>
+      </div>
+      <div class="tabs" id="seq-samples" style="margin-top:14px"></div>
+      <p class="hint" id="seq-status">会依次尝试：常见序列比对 → 差分/多项式 → 线性递推 → OEIS。</p>
+    </div>
+
+    <div id="seq-result" style="display:none;margin-top:18px">
+      <div class="card">
+        <h3>结论</h3>
+        <div id="seq-summary"></div>
+      </div>
+      <div class="grid two" style="margin-top:18px;align-items:start">
+        <div class="card"><h3>差分表</h3><div style="overflow-x:auto" id="seq-diff"></div></div>
+        <div class="card"><h3>OEIS</h3><div id="seq-oeis-result" class="hint">未查询</div></div>
+      </div>
+      <div class="card" style="margin-top:18px"><h3>备注</h3><ul class="notes" id="seq-notes"></ul></div>
+    </div>
+  </section>
+
+  <section id="panel-const" class="panel" style="padding-top:0">
+    <div class="card">
+      <div class="row">
+        <div class="field" style="flex:3 1 320px;margin:0">
+          <label for="const-value">数值</label>
+          <input id="const-value" class="input" value="3.141592653589793" spellcheck="false">
+        </div>
+        <div class="field" style="flex:0 0 130px;margin:0">
+          <label for="const-digits">有效位数</label>
+          <input id="const-digits" class="input" type="number" min="10" max="200" value="40">
+        </div>
+        <button id="const-run" class="btn primary" style="flex:0 0 auto;align-self:flex-end">识别 →</button>
+      </div>
+      <div class="tabs" id="const-samples" style="margin-top:14px"></div>
+      <p class="hint" id="const-status">思路：PSLQ 找整数关系，SymPy 做代数化简，再看最小多项式。</p>
+    </div>
+
+    <div id="const-result" style="display:none;margin-top:18px">
+      <div class="card">
+        <h3>候选形式</h3>
+        <div class="grid" style="gap:10px" id="const-guesses"></div>
+        <h3 style="margin-top:22px">连分数</h3>
+        <div class="hint" id="const-cf"></div>
+        <ul class="notes" id="const-notes" style="margin-top:14px"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-conj" class="panel" style="padding-top:0">
+    <div class="card">
+      <div class="row">
+        <div class="field" style="flex:2 1 260px;margin:0">
+          <label for="conj-select">猜想</label>
+          <select id="conj-select" class="input"></select>
+        </div>
+        <div class="field" style="flex:0 0 150px;margin:0">
+          <label for="conj-limit">检验范围</label>
+          <input id="conj-limit" class="input" type="number" min="10" max="500000" value="2000">
+        </div>
+        <button id="conj-run" class="btn primary" style="flex:0 0 auto;align-self:flex-end">检验 →</button>
+      </div>
+      <p class="hint" id="conj-statement">选一个猜想，然后让机器去找证据。</p>
+      <div class="tabs" id="conj-samples" style="margin-top:10px"></div>
+    </div>
+
+    <div id="conj-result" style="display:none;margin-top:18px">
+      <div class="card">
+        <div class="verdict" id="conj-verdict">—</div>
+        <div class="stat-grid" id="conj-stats"></div>
+        <canvas id="conj-chart" data-height="260" style="margin-top:16px"></canvas>
+        <div class="row" style="margin-top:14px">
+          <a class="btn" id="conj-export" href="#" download>导出这次的数据 CSV</a>
+        </div>
+        <ul class="notes" id="conj-notes" style="margin-top:12px"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-data" class="panel" style="padding-top:0">
+    <div class="card">
+      <h3>整数数据表</h3>
+      <p class="hint">每行一个整数：n、是否素数、τ(n)、φ(n)、最大质因数、科拉茨步数。最多 5000 行。</p>
+      <div class="row" style="margin-top:12px">
+        <input id="data-start" class="input" value="1" style="flex:1 1 120px">
+        <span style="flex:0 0 auto;align-self:center;color:var(--muted)">到</span>
+        <input id="data-end" class="input" value="500" style="flex:1 1 140px">
+        <a id="data-download" class="btn primary" style="flex:0 0 auto" href="/api/export/number-table.csv?start=1&end=500">下载 CSV</a>
+      </div>
+      <p class="hint" style="margin-top:12px">列名：<code>n, is_prime, tau, phi, largest_prime_factor, collatz_steps</code></p>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <h3>猜想检验数据</h3>
+      <p class="hint">先在上一个标签页跑一次检验，再回来点这里下载它画图用的那组数据。</p>
+      <div class="row" style="margin-top:12px">
+        <select id="data-conj" class="input" style="flex:2 1 240px"></select>
+        <input id="data-limit" class="input" type="number" value="2000" style="flex:0 0 140px">
+        <a id="data-conj-download" class="btn" style="flex:0 0 auto" href="#">下载 CSV</a>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <h3>在脚本里复现</h3>
+      <p class="hint">所有数据都能直接从这里拿，不需要爬页面：</p>
+      <pre class="csv" id="data-api">GET /api/number/1729
+GET /api/conjecture/goldbach?limit=2000
+GET /api/export/number-table.csv?start=1&amp;end=500
+POST /api/sequence   {"terms": "1,1,2,3,5,8", "oeis": true}
+POST /api/identify   {"value": "3.141592653589793", "digits": 40}</pre>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span>数学工坊 · 研究台</span>
+    <span><a href="/api/conjectures">猜想列表</a> · <a href="/engine.html">计算引擎</a> · <a href="/numbers.html">数字剖析</a></span>
+  </div>
+</footer>
+
+<script src="/js/common.js"></script>
+<script src="/js/research.js"></script>
+</body>
+</html>

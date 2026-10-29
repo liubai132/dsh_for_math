@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.shots/
+.chrome-*/
+.dsh-probe.txt
+*.log
+node_modules/
+.DS_Store
+Thumbs.db
