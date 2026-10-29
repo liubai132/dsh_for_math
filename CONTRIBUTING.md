@@ -13,7 +13,7 @@
 
 ```powershell
 cd plugin/math-atelier
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 python -m app.server          # 引擎：http://127.0.0.1:8899
 ```
 

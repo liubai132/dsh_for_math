@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: install
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
       - name: test
         run: python -m unittest discover -s tests -p "test_*.py"
 
@@ -36,5 +36,3 @@ jobs:
         run: node --check plugin/math-atelier/client.js
       - name: check manifest
         run: node -e "JSON.parse(require('fs').readFileSync('plugin/math-atelier/package.json','utf8'))"
-      - name: check bundle patch
-        run: node -e "console.log('ok')"
