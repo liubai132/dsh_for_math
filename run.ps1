@@ -1,8 +1,9 @@
-# 启动数学工坊：http://127.0.0.1:8899
+# 只启动数学引擎（调试用）：http://127.0.0.1:8899
 $ErrorActionPreference = 'Stop'
-Set-Location -LiteralPath $PSScriptRoot
+Set-Location -LiteralPath (Join-Path $PSScriptRoot 'plugin\math-atelier')
 
 $env:PYTHONIOENCODING = 'utf-8'
+$env:PYTHONPATH = $PWD.Path
 
 if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
     Write-Host '没找到 python，请先安装 Python 3.10+' -ForegroundColor Red
@@ -16,5 +17,5 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $port = if ($env:MATH_PORT) { $env:MATH_PORT } else { '8899' }
-Write-Host "数学工坊正在启动 → http://127.0.0.1:$port" -ForegroundColor Green
+Write-Host "数学引擎正在启动 → http://127.0.0.1:$port" -ForegroundColor Green
 python -m app.server

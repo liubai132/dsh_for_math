@@ -5,25 +5,27 @@
 | 方向 | 需要做的事 | 主要文件 |
 |---|---|---|
 | 数学内容 | 写专题、补公式、把直觉讲清楚 | `plugin/math-atelier/client.js` 里的 `*_PAGES` |
-| 引擎 | 算法实现、数值稳定性、性能 | `app/engine/*.py` |
-| 前端 | 面板 UI、可视化、交互 | `web/*.js`、`client.js` 的渲染部分 |
+| 引擎 | 算法实现、数值稳定性、性能 | `plugin/math-atelier/app/engine/*.py` |
+| 前端 | 面板 UI、可视化、交互 | `plugin/math-atelier/client.js` 的渲染部分 |
 | 插件 / 基建 | DSH 适配、CI、发布、文档 | `plugin/math-atelier/index.js`、`.github/` |
 
 ## 开发环境
 
 ```powershell
+cd plugin/math-atelier
 pip install -r requirements.txt
-python -m app.server          # 引擎 + 网站，http://127.0.0.1:8899
+python -m app.server          # 引擎：http://127.0.0.1:8899
 ```
 
-装插件需要 [DeepSeek Harness](https://github.com/deepseek-ai)；插件会自己拉起引擎。
+装插件需要 [DeepSeek Harness](https://github.com/deepseek-ai)；插件会自己拉起引擎，不用手动起服务。
 
 ## 提交前检查
 
 ```powershell
+cd plugin/math-atelier
 python -m unittest discover -s tests -p "test_*.py"
-node --check plugin/math-atelier/client.js
-node --check plugin/math-atelier/index.js
+node --check client.js
+node --check index.js
 ```
 
 三条都过再提 PR。CI 也会跑这三条。

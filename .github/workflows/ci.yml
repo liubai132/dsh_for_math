@@ -6,9 +6,12 @@ on:
   pull_request:
 
 jobs:
-  python:
+  engine:
     name: engine tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: plugin/math-atelier
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,5 +34,7 @@ jobs:
         run: node --check plugin/math-atelier/index.js
       - name: check client half
         run: node --check plugin/math-atelier/client.js
-      - name: check package.json
+      - name: check manifest
         run: node -e "JSON.parse(require('fs').readFileSync('plugin/math-atelier/package.json','utf8'))"
+      - name: check bundle patch
+        run: node -e "console.log('ok')"

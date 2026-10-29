@@ -7,11 +7,15 @@
  */
 
 import { spawn } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import { dirname } from 'node:path'
 
 export const inject = ['webServer']
 
 const ROUTE = '/plugin/math-atelier'
-const DEFAULT_DIR = process.env.MATH_ATELIER_DIR || 'F:\\ai数学'
+// 引擎就打包在插件目录里，跟着插件走，不依赖外部路径
+const PLUGIN_DIR = dirname(fileURLToPath(import.meta.url))
+const DEFAULT_DIR = process.env.MATH_ATELIER_DIR || PLUGIN_DIR
 const DEFAULT_PORT = Number(process.env.MATH_ATELIER_PORT || 8899)
 const HEALTH_TIMEOUT = 800
 
