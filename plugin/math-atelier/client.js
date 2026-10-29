@@ -735,8 +735,40 @@ window.__ModuleLoader__.load({
         note: '欧拉法和 RK4 的差别，在同样的步数下非常直观。',
       },
       {
-        id: 'stiff',
+        id: 'quad',
         num: '02',
+        label: '数值积分',
+        title: '数值积分：把面积切成小块',
+        lead:
+          '定积分是曲线下的面积。解析原函数求不出来时，就用规则的小块去逼近它。' +
+          '块切得越细，误差越小；不同规则的收敛速度差别很大。',
+        formulas: [
+          ['梯形法', '∫ ≈ h/2 · [f₀ + 2f₁ + … + 2fₙ₋₁ + fₙ]'],
+          ['中点法', '∫ ≈ h · [f(½) + f(1½) + …]'],
+          ['辛普森法', '∫ ≈ h/3 · [f₀ + 4f₁ + 2f₂ + … + fₙ]'],
+          ['误差阶', '梯形 O(h²)　中点 O(h²)　辛普森 O(h⁴)'],
+        ],
+        bullets: [
+          '梯形法把每一小块当成梯形，误差来自曲边',
+          '辛普森法用抛物线拟合，n 翻倍误差降 16 倍',
+          '阶数越高，同样的精度需要的分点越少',
+        ],
+        extensions: [
+          {
+            type: 'quad',
+            tag: '拓展',
+            title: '误差随分点翻倍怎么变',
+            desc:
+              '固定被积函数和区间，把 n 逐个翻倍，看三种方法的绝对误差和实测收敛阶。' +
+              '阶数就是误差每翻一倍 n 缩小多少倍的对数：2 表示缩 4 倍，4 表示缩 16 倍。',
+            uses: ['integrate.integrate', 'integrate.order_table'],
+          },
+        ],
+        note: '辛普森法要求 n 为偶数；表里自动取最近的偶数。',
+      },
+      {
+        id: 'stiff',
+        num: '03',
         label: '稳定性',
         title: '稳定性：步长不能随便给',
         lead:
@@ -1419,6 +1451,7 @@ window.__ModuleLoader__.load({
                   ext.type === 'morph' ? h(MorphDemo, null) : null,
                   ext.type === 'cloth' ? h(ClothDemo, null) : null,
                   ext.type === 'phase' ? h(PhaseDemo, null) : null,
+                  ext.type === 'quad' ? h(QuadDemo, null) : null,
                   ext.uses && ext.uses.length
                     ? h(
                         'div',
@@ -1935,6 +1968,109 @@ window.__ModuleLoader__.load({
               (info.uniform ? '按弧长均匀取点' : '按原顶点等距取点') +
               ' · 两种对应方式下，点连线的走向完全不同'
             : '载入中…',
+        ),
+      )
+    }
+
+    // ---------------------------------------------------------------- 数值积分演示
+
+    const QUAD_EXPRESSIONS = [
+      { id: 'sin', label: 'sin x', expression: 'sin(x)', a: 0, b: 3.141592653589793 },
+      { id: 'poly', label: 'x²', expression: 'x**2', a: 0, b: 1 },
+      { id: 'gauss', label: 'e^(−x²)', expression: 'exp(-x**2)', a: -2, b: 2 },
+    ]
+
+    function QuadDemo() {
+      const [pick, setPick] = React.useState(0)
+      const [data, setData] = React.useState(null)
+      const [error, setError] = React.useState('')
+
+      React.useEffect(() => {
+        let alive = true
+        setError('')
+        const target = QUAD_EXPRESSIONS[pick]
+        fetch(API + '/integrate/table', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            expression: target.expression,
+            a: target.a,
+            b: target.b,
+            ns: [8, 16, 32, 64, 128],
+          }),
+        })
+          .then((response) => (response.ok ? response.json() : Promise.reject(new Error('HTTP ' + response.status))))
+          .then((result) => {
+            if (alive) setData(result)
+          })
+          .catch((err) => {
+            if (alive) setError(err.message)
+          })
+        return () => {
+          alive = false
+        }
+      }, [pick])
+
+      const rows = data ? data.rows : []
+      const fmt = (value) => {
+        if (value === null || value === undefined) return '—'
+        if (value === 0) return '0'
+        if (Math.abs(value) < 1e-4) return value.toExponential(2)
+        return value.toPrecision(4)
+      }
+
+      return h(
+        'div',
+        { className: 'ma-quad' },
+        h(
+          'div',
+          { className: 'ma-quad-head' },
+          QUAD_EXPRESSIONS.map((item, index) =>
+            h(
+              'button',
+              {
+                key: item.id,
+                type: 'button',
+                className: 'ma-demo-chip' + (index === pick ? ' ma-demo-chip-active' : ''),
+                onClick: () => setPick(index),
+              },
+              item.label,
+            ),
+          ),
+          h('span', { className: 'ma-quad-exact' }, data && data.exact !== null ? '精确值 ' + fmt(data.exact) : ''),
+        ),
+        error ? h('div', { className: 'ma-error' }, error) : null,
+        h(
+          'table',
+          { className: 'ma-quad-table' },
+          h(
+            'thead',
+            null,
+            h(
+              'tr',
+              null,
+              h('th', null, 'n'),
+              h('th', null, '梯形误差'),
+              h('th', null, '阶'),
+              h('th', null, '辛普森误差'),
+              h('th', null, '阶'),
+            ),
+          ),
+          h(
+            'tbody',
+            null,
+            rows.map((row) =>
+              h(
+                'tr',
+                { key: row.n },
+                h('td', null, String(row.n)),
+                h('td', null, fmt(row.trapezoidError)),
+                h('td', { className: 'ma-quad-order' }, row.trapezoidOrder === null ? '—' : row.trapezoidOrder.toFixed(2)),
+                h('td', null, fmt(row.simpsonError)),
+                h('td', { className: 'ma-quad-order' }, row.simpsonOrder === null ? '—' : row.simpsonOrder.toFixed(2)),
+              ),
+            ),
+          ),
         ),
       )
     }
@@ -4411,6 +4547,12 @@ precision mediump float;
 .ma-cloth-gl-on canvas:not(.ma-cloth-gl) { visibility:hidden; }
 .ma-cloth-gpu-on .ma-cloth-gpu { display:block; }
 .ma-cloth-gpu-on canvas:not(.ma-cloth-gpu) { visibility:hidden; }
+.ma-quad-head { display:flex; gap:6px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+.ma-quad-exact { margin-left:auto; font-size:12px; color:rgba(231,233,236,.45); font-family:ui-monospace, Consolas, monospace; }
+.ma-quad-table { width:100%; border-collapse:collapse; font-size:12.5px; font-family:ui-monospace, Consolas, monospace; }
+.ma-quad-table th { text-align:left; font-weight:500; color:rgba(231,233,236,.42); padding:6px 8px; border-bottom:1px solid rgba(255,255,255,.08); }
+.ma-quad-table td { padding:6px 8px; color:rgba(231,233,236,.8); border-bottom:1px solid rgba(255,255,255,.04); }
+.ma-quad-order { color:rgba(79,179,163,.9); }
 .ma-phase-head { display:flex; gap:6px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
 .ma-phase-canvas {
   display:block; width:100%; height:320px; border-radius:10px;

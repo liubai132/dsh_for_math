@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 import sympy as sp
 
-from .engine import cas, catalog, constants, fold, interp, numbers, phase, research, shapes
+from .engine import cas, catalog, constants, fold, integrate, interp, numbers, phase, research, shapes
 from .engine.cas import MathTimeout
 from .engine.safety import ParseError
 
@@ -226,6 +226,37 @@ class PhaseRequest(BaseModel):
     grid: int = Field(default=13, ge=4, le=40)
     t_end: float = Field(default=8.0, gt=0.0, le=60.0)
     dt: float = Field(default=0.02, gt=0.0, le=0.2)
+
+
+class IntegrateRequest(BaseModel):
+    expression: str = Field(default="sin(x)")
+    a: float = Field(default=0.0)
+    b: float = Field(default=3.141592653589793)
+    n: int = Field(default=100, ge=1, le=200000)
+    method: str = Field(default="trapezoid")
+
+
+class IntegrateTableRequest(BaseModel):
+    expression: str = Field(default="sin(x)")
+    a: float = Field(default=0.0)
+    b: float = Field(default=3.141592653589793)
+    ns: list[int] | None = None
+
+
+@app.post("/api/integrate")
+def integrate_value(req: IntegrateRequest) -> dict:
+    try:
+        return integrate.integrate(req.expression, req.a, req.b, req.n, req.method)
+    except Exception as exc:  # noqa: BLE001
+        raise _fail(exc) from exc
+
+
+@app.post("/api/integrate/table")
+def integrate_table(req: IntegrateTableRequest) -> dict:
+    try:
+        return integrate.order_table(req.expression, req.a, req.b, req.ns)
+    except Exception as exc:  # noqa: BLE001
+        raise _fail(exc) from exc
 
 
 @app.get("/api/phase/systems")

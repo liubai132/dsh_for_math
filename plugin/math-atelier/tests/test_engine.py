@@ -202,6 +202,42 @@ class InterpTests(unittest.TestCase):
             data = interp.curve(kind, [0, 0], [4, 3], frames=60)
             self.assertGreaterEqual(data["path_length"], data["chord_length"] - 1e-6)
 
+    def test_integrate_trapezoid_error(self):
+        from app.engine import integrate
+
+        result = integrate.integrate('x**2', 0.0, 1.0, 100, 'trapezoid')
+        self.assertAlmostEqual(result['value'], 1 / 3, places=4)
+        self.assertLess(result['error'], 2e-5)
+
+    def test_integrate_simpson_exact_on_quadratic(self):
+        from app.engine import integrate
+
+        result = integrate.integrate('x**2', 0.0, 1.0, 10, 'simpson')
+        self.assertAlmostEqual(result['value'], 1 / 3, places=10)
+
+    def test_integrate_convergence_orders(self):
+        from app.engine import integrate
+
+        table = integrate.order_table('sin(x)', 0.0, 3.141592653589793, [16, 32, 64])
+        last = table['rows'][-1]
+        self.assertAlmostEqual(last['trapezoidOrder'], 2.0, places=1)
+        self.assertAlmostEqual(last['simpsonOrder'], 4.0, places=1)
+
+    def test_integrate_rejects_odd_simpson(self):
+        from app.engine import integrate
+
+        with self.assertRaises(ValueError):
+            integrate.integrate('x', 0.0, 1.0, 7, 'simpson')
+
+    def test_integrate_api(self):
+        client = TestClient(app)
+        response = client.post('/api/integrate', json={'expression': 'x**2', 'a': 0, 'b': 1, 'n': 100})
+        self.assertEqual(response.status_code, 200)
+        self.assertAlmostEqual(response.json()['value'], 1 / 3, places=3)
+        table = client.post('/api/integrate/table', json={'expression': 'x**2', 'a': 0, 'b': 1, 'ns': [8, 16, 32]})
+        self.assertEqual(table.status_code, 200)
+        self.assertEqual(len(table.json()['rows']), 3)
+
     def test_phase_oscillator_equilibrium(self):
         from app.engine import phase
 
