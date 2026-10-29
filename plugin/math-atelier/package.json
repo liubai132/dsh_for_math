@@ -1,6 +1,6 @@
 {
   "name": "@local/math-atelier",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "type": "module",
   "description": "数学工坊：符号计算、序列分析、常数识别与猜想检验",

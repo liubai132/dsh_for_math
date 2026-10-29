@@ -2277,7 +2277,7 @@ window.__ModuleLoader__.load({
       openMax: 0.5,        // 下摆处褶打开的程度：0.5 = 宽窄面等宽（尽量展平）
     }
 
-    const CLOTH_BUILD = '2.0.3'
+    const CLOTH_BUILD = '2.4.0'
     const CLOTH_PLEATS = GARMENT_SPEC.pleats
     const CLOTH_COLS = GARMENT_SPEC.pleats * GARMENT_SPEC.columnsPerPleat
     const CLOTH_ROWS = GARMENT_SPEC.rows
