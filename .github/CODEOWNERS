@@ -1,0 +1,12 @@
+# 默认所有改动需要维护者 review
+* @liubai132
+
+# 引擎：算法与数值稳定性
+/plugin/math-atelier/app/ @liubai132
+
+# 面板 UI 与渲染
+/plugin/math-atelier/client.js @liubai132
+/plugin/math-atelier/index.js @liubai132
+
+# 构建 / CI
+/.github/ @liubai132
