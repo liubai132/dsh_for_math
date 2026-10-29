@@ -24,7 +24,7 @@
 git clone https://github.com/liubai132/dsh_for_math.git
 
 # 2. 装依赖（引擎随插件打包，只需一次）
-pip install -r dsh_for_math/plugin/math-atelier/requirements.txt
+pip install -r dsh_for_math/plugin/math-atelier/requirements-dev.txt
 
 # 3. 在 DSH 里安装插件，指向这个目录
 plugin_manager install_bundle  →  <克隆路径>\plugin\math-atelier
@@ -47,7 +47,8 @@ math-atelier/
 │  │  ├─ server.py       启动入口
 │  │  └─ engine/         cas / numbers / interp / fold / phase / catalog …
 │  ├─ tests/             55 个 unittest
-│  └─ requirements.txt
+│  ├─ requirements.txt
+│  └─ requirements-dev.txt
 ├─ docs/                 设计与数学说明
 └─ CONTRIBUTING.md
 ```
@@ -56,7 +57,7 @@ math-atelier/
 
 ```powershell
 cd plugin/math-atelier
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 
 # 只跑引擎（带热重载，改完刷新面板即可）
 python -m app.server

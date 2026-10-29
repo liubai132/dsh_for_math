@@ -30,7 +30,7 @@ git clone https://github.com/liubai132/dsh_for_math.git
 cd dsh_for_math
 
 # 2. 装引擎依赖
-pip install -r plugin/math-atelier/requirements.txt
+pip install -r plugin/math-atelier/requirements-dev.txt
 
 # 3. 装插件（路径指向克隆下来的插件目录）
 #    在 DSH 里执行：

@@ -1,0 +1,11 @@
+# 测试与开发依赖：CI 和贡献者使用，最终用户不需要装
+#
+# 为什么不并进 requirements.txt：
+#   httpx 只被 starlette 的 TestClient 用到，运行时用不着。
+#   锁 starlette/fastapi 是因为新的 starlette 把 TestClient 依赖改成了 httpx2，
+#   不锁的话 CI 每次装最新就会漂移。
+-r requirements.txt
+
+fastapi==0.136.1
+starlette==1.0.0
+httpx==0.28.1

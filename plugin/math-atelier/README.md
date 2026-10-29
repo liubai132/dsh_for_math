@@ -44,7 +44,7 @@ plugin/math-atelier/
 
 ```powershell
 cd plugin/math-atelier
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 python -m unittest discover -s tests -p "test_*.py"
 node --check client.js
 ```
