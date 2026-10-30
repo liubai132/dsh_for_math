@@ -202,6 +202,80 @@ class InterpTests(unittest.TestCase):
             data = interp.curve(kind, [0, 0], [4, 3], frames=60)
             self.assertGreaterEqual(data["path_length"], data["chord_length"] - 1e-6)
 
+    def _maze_fixture(self):
+        from app.engine import search
+
+        cols, rows = 15, 11
+        start = 1 * cols + 1
+        end = (rows - 2) * cols + (cols - 2)
+        maze = search.generate_maze(cols, rows, start, end, seed=11)
+        return search, cols, rows, start, end, maze
+
+    def test_search_astar_matches_dijkstra(self):
+        search, cols, rows, start, end, maze = self._maze_fixture()
+        astar = search.solve(maze['walls'], cols, rows, start, end, 'astar')
+        dij = search.solve(maze['walls'], cols, rows, start, end, 'dijkstra')
+        self.assertTrue(astar['found'])
+        self.assertAlmostEqual(astar['cost'], dij['cost'], places=6)
+        # A* 探索的格子不应多于 Dijkstra
+        self.assertLessEqual(astar['visited'], dij['visited'])
+
+    def test_search_path_is_contiguous_and_walkable(self):
+        search, cols, rows, start, end, maze = self._maze_fixture()
+        result = search.solve(maze['walls'], cols, rows, start, end, 'dijkstra')
+        path = result['path']
+        self.assertEqual(path[0], start)
+        self.assertEqual(path[-1], end)
+        for a, b in zip(path, path[1:]):
+            ax, ay = a % cols, a // cols
+            bx, by = b % cols, b // cols
+            self.assertLessEqual(abs(ax - bx), 1)
+            self.assertLessEqual(abs(ay - by), 1)
+            self.assertEqual(maze['walls'][b], 0)
+
+    def test_search_greedy_never_beats_optimal(self):
+        search, cols, rows, start, end, maze = self._maze_fixture()
+        greedy = search.solve(maze['walls'], cols, rows, start, end, 'greedy')
+        optimal = search.solve(maze['walls'], cols, rows, start, end, 'dijkstra')
+        self.assertGreaterEqual(greedy['cost'] + 1e-9, optimal['cost'])
+
+    def test_search_bfs_minimizes_steps_not_distance(self):
+        search, cols, rows, start, end, maze = self._maze_fixture()
+        bfs = search.solve(maze['walls'], cols, rows, start, end, 'bfs')
+        dij = search.solve(maze['walls'], cols, rows, start, end, 'dijkstra')
+        self.assertLessEqual(bfs['steps'], dij['steps'])
+
+    def test_search_maze_is_deterministic_with_seed(self):
+        search, cols, rows, start, end, maze = self._maze_fixture()
+        again = search.generate_maze(cols, rows, start, end, seed=11)
+        self.assertEqual(maze['walls'], again['walls'])
+
+    def test_search_compare_covers_all_algos(self):
+        search, cols, rows, start, end, maze = self._maze_fixture()
+        result = search.compare(maze['walls'], cols, rows, start, end)
+        self.assertEqual(len(result['runs']), 4)
+        self.assertEqual({row['algo'] for row in result['runs']}, {'bfs', 'dijkstra', 'astar', 'greedy'})
+
+    def test_search_api(self):
+        client = TestClient(app)
+        maze = client.post('/api/search/maze', json={'cols': 15, 'rows': 11, 'seed': 3})
+        self.assertEqual(maze.status_code, 200)
+        payload = maze.json()
+        self.assertEqual(len(payload['walls']), 15 * 11)
+        solved = client.post(
+            '/api/search/solve',
+            json={
+                'cols': 15,
+                'rows': 11,
+                'walls': payload['walls'],
+                'start': payload['start'],
+                'end': payload['end'],
+                'algo': 'astar',
+            },
+        )
+        self.assertEqual(solved.status_code, 200)
+        self.assertTrue(solved.json()['found'])
+
     def test_integrate_trapezoid_error(self):
         from app.engine import integrate
 

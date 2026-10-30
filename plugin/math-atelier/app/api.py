@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 import sympy as sp
 
-from .engine import cas, catalog, constants, fold, integrate, interp, numbers, phase, research, shapes
+from .engine import cas, catalog, constants, fold, integrate, interp, numbers, phase, research, search, shapes
 from .engine.cas import MathTimeout
 from .engine.safety import ParseError
 
@@ -255,6 +255,64 @@ def integrate_value(req: IntegrateRequest) -> dict:
 def integrate_table(req: IntegrateTableRequest) -> dict:
     try:
         return integrate.order_table(req.expression, req.a, req.b, req.ns)
+    except Exception as exc:  # noqa: BLE001
+        raise _fail(exc) from exc
+
+
+class SearchMazeRequest(BaseModel):
+    cols: int = Field(default=31, ge=5, le=60)
+    rows: int = Field(default=21, ge=5, le=60)
+    seed: int | None = None
+
+
+class SearchSolveRequest(BaseModel):
+    cols: int = Field(default=31, ge=5, le=60)
+    rows: int = Field(default=21, ge=5, le=60)
+    walls: list[int]
+    start: int = Field(default=0, ge=0)
+    end: int = Field(default=0, ge=0)
+    algo: str = Field(default="astar")
+
+
+class SearchCompareRequest(BaseModel):
+    cols: int = Field(default=31, ge=5, le=60)
+    rows: int = Field(default=21, ge=5, le=60)
+    walls: list[int]
+    start: int = Field(default=0, ge=0)
+    end: int = Field(default=0, ge=0)
+
+
+@app.post("/api/search/maze")
+def search_maze(req: SearchMazeRequest) -> dict:
+    try:
+        start = 1 * req.cols + 1
+        end = (req.rows - 2) * req.cols + (req.cols - 2)
+        return search.generate_maze(req.cols, req.rows, start, end, req.seed)
+    except Exception as exc:  # noqa: BLE001
+        raise _fail(exc) from exc
+
+
+@app.post("/api/search/solve")
+def search_solve(req: SearchSolveRequest) -> dict:
+    try:
+        start = req.start or (1 * req.cols + 1)
+        end = req.end or ((req.rows - 2) * req.cols + (req.cols - 2))
+        return {
+            "ok": True,
+            "start": start,
+            "end": end,
+            **search.solve(req.walls, req.cols, req.rows, start, end, req.algo),
+        }
+    except Exception as exc:  # noqa: BLE001
+        raise _fail(exc) from exc
+
+
+@app.post("/api/search/compare")
+def search_compare(req: SearchCompareRequest) -> dict:
+    try:
+        start = req.start or (1 * req.cols + 1)
+        end = req.end or ((req.rows - 2) * req.cols + (req.cols - 2))
+        return search.compare(req.walls, req.cols, req.rows, start, end)
     except Exception as exc:  # noqa: BLE001
         raise _fail(exc) from exc
 

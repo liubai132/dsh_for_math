@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import inspect
 
-from . import cas, constants, integrate, interp, numbers, phase, research
+from . import cas, constants, integrate, interp, numbers, phase, research, search
 
 MODULE_TITLES = {
     "interp": ("插值与凸组合", "向量之间的线性插值、凸组合、轨迹生成"),
@@ -18,6 +18,7 @@ MODULE_TITLES = {
     "constants": ("数学常数", "高精度常数与数字分布"),
     "phase": ("相图", "向量场、轨线、平衡点与稳定性分类"),
     "integrate": ("数值积分", "梯形法、中点法、辛普森法与误差收敛阶"),
+    "search": ("网格寻路", "BFS / Dijkstra / A* / 贪心与迷宫生成"),
 }
 
 MODULES = {
@@ -28,6 +29,7 @@ MODULES = {
     "constants": constants,
     "phase": phase,
     "integrate": integrate,
+    "search": search,
 }
 
 

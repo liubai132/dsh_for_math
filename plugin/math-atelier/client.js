@@ -17,7 +17,7 @@ window.__ModuleLoader__.load({
         if (raw) {
           const saved = JSON.parse(raw)
           if (saved && typeof saved === 'object') {
-            if (saved.page === 'convex' || saved.page === 'numeric') VIEW.page = saved.page
+            if (saved.page === 'convex' || saved.page === 'numeric' || saved.page === 'search') VIEW.page = saved.page
             if (typeof saved.section === 'string') VIEW.section = saved.section
             if (typeof saved.yaw === 'number') VIEW.yaw = saved.yaw
             if (typeof saved.pitch === 'number') VIEW.pitch = saved.pitch
@@ -662,7 +662,7 @@ window.__ModuleLoader__.load({
     const RING_NODES = [
       { angle: 0, title: '凸优化', page: 'convex' },
       { angle: 72, title: '数值分析', page: 'numeric' },
-      { angle: 144, title: '节点三' },
+      { angle: 144, title: '图与搜索', page: 'search' },
       { angle: 216, title: '节点四' },
       { angle: 288, title: '节点五' },
     ]
@@ -679,6 +679,103 @@ window.__ModuleLoader__.load({
     function clamp(value, low, high) {
       return Math.min(high, Math.max(low, value))
     }
+
+    // 图与搜索的分节
+    const SEARCH_PAGES = [
+      {
+        id: 'overview',
+        num: '00',
+        label: '概览',
+        title: '把地图变成图，然后找一条路',
+        lead:
+          '网格地图可以看成一个图：每个格子是点，相邻格子是边。找路就是在这个图上做搜索——' +
+          '问题变成「按什么顺序扩展点」，不同顺序对应不同算法。',
+        formulas: [
+          ['图', 'G = (V, E)'],
+          ['边权', '直走 1，斜走 √2'],
+          ['搜索目标', '从 s 到 t 的一条最小代价路径'],
+        ],
+        bullets: [
+          '网格是特殊的图：每个点最多 8 条边',
+          '斜走代价 √2，因为对角线长度是边长的根号二倍',
+          '「贴角穿墙」要禁止：斜走时两条直角边都得通',
+        ],
+        note: '这里的四种算法只差在「先扩展谁」。',
+      },
+      {
+        id: 'four',
+        num: '01',
+        label: '四种搜索',
+        title: '四种搜索：只差在排序',
+        lead:
+          'BFS 用队列，Dijkstra 用「已走代价」排序，A* 用「已走代价 + 到终点的估计」，' +
+          '贪心只用估计。队列换优先队列，算法就换了一个。',
+        formulas: [
+          ['BFS', '按步数排队 → 步数最优'],
+          ['Dijkstra', '按 g 排序 → 距离最优'],
+          ['A*', '按 g + h 排序 → 距离最优，探索更少'],
+          ['贪心', '按 h 排序 → 快，可能绕远'],
+        ],
+        bullets: [
+          'g 是起点到当前点的真实代价，h 是到终点的估计',
+          'Dijkstra 相当于 h ≡ 0 的 A*',
+          '贪心相当于 g 的权重趋近 0，所以不保证最优',
+          'BFS 的「步数」不等于「距离」：斜走一步和直走一步都算 1',
+        ],
+        extensions: [
+          {
+            type: 'search',
+            tag: '拓展',
+            title: '同一张迷宫，四种算法跑给你看',
+            desc:
+              '生成一张随机迷宫，选一种算法看它探索的顺序（颜色越亮越晚），再点「对比」把四种放在一起：' +
+              'A* 和 Dijkstra 给出同样的最短路径，但 A* 探的格子少；贪心探得最少，却可能绕远。',
+            uses: ['search.generate_maze', 'search.solve', 'search.compare'],
+          },
+        ],
+        note: '动画里高亮的是「访问顺序」，不是最终路径；路径最后画。',
+      },
+      {
+        id: 'heuristic',
+        num: '02',
+        label: '启发式',
+        title: '启发式：估得准，才敢少探',
+        lead:
+          'h 必须「不高估」真实代价（可采纳），A* 才保证最优。网格上常用的估法是八方向距离：' +
+          '斜走尽量多，剩下直走。',
+        formulas: [
+          ['八方向距离', 'h = dx + dy + (√2 − 2)·min(dx, dy)'],
+          ['可采纳', 'h(n) ≤ 真实代价(n → t)'],
+          ['一致', 'h(n) ≤ 边代价 + h(n′)，保证不重复扩展'],
+        ],
+        bullets: [
+          'h 估得太小 → 退化成 Dijkstra，探得多但一定最优',
+          'h 估得太大 → 变成贪心，快但可能不最优',
+          '八方向距离正好匹配「直走 1、斜走 √2」的代价',
+        ],
+        note: 'A* 之所以比 Dijkstra 少探，就是靠 h 把搜索往终点方向拉。',
+      },
+      {
+        id: 'maze',
+        num: '03',
+        label: '迷宫生成',
+        title: '先撒墙，再用搜索验收',
+        lead:
+          '随机撒墙不一定生成「像样」的迷宫：可能一条直路就到，也可能根本走不通。' +
+          '所以生成之后要用 A* 自查，不满足条件就重撒。',
+        formulas: [
+          ['墙密度', '16% – 45%'],
+          ['探索比例', '12% – 55%'],
+          ['绕路要求', '最优代价 ≥ 直线距离 × 1.12'],
+        ],
+        bullets: [
+          '密度太低 → 一眼看穿；太高 → 常常无解',
+          '绕路系数保证「必须绕开障碍」，不是一条直线',
+          '起点终点周围清空，避免一出生就贴墙',
+        ],
+        note: '生成是随机的，同一个种子会得到同一张图。',
+      },
+    ]
 
     // 数值分析的分节
     const NUMERIC_PAGES = [
@@ -1452,6 +1549,7 @@ window.__ModuleLoader__.load({
                   ext.type === 'cloth' ? h(ClothDemo, null) : null,
                   ext.type === 'phase' ? h(PhaseDemo, null) : null,
                   ext.type === 'quad' ? h(QuadDemo, null) : null,
+                  ext.type === 'search' ? h(SearchDemo, null) : null,
                   ext.uses && ext.uses.length
                     ? h(
                         'div',
@@ -1796,8 +1894,9 @@ window.__ModuleLoader__.load({
                 origin: origin,
                 instant: instant,
                 onClose: closePage,
-                pages: page === 'numeric' ? NUMERIC_PAGES : CONVEX_PAGES,
-                heading: page === 'numeric' ? '数值分析' : '凸优化',
+                pages:
+                  page === 'numeric' ? NUMERIC_PAGES : page === 'search' ? SEARCH_PAGES : CONVEX_PAGES,
+                heading: page === 'numeric' ? '数值分析' : page === 'search' ? '图与搜索' : '凸优化',
               })
             : null,
       )
@@ -1969,6 +2068,265 @@ window.__ModuleLoader__.load({
               ' · 两种对应方式下，点连线的走向完全不同'
             : '载入中…',
         ),
+      )
+    }
+
+    // ---------------------------------------------------------------- 网格寻路演示
+
+    const SEARCH_ALGOS = [
+      { id: 'astar', label: 'A*', color: '#38bdf8' },
+      { id: 'dijkstra', label: 'Dijkstra', color: '#facc15' },
+      { id: 'bfs', label: 'BFS', color: '#fb923c' },
+      { id: 'greedy', label: '贪心', color: '#c084fc' },
+    ]
+
+    function SearchDemo() {
+      const canvasRef = React.useRef(null)
+      const mazeRef = React.useRef(null)
+      const resultRef = React.useRef(null)
+      const progressRef = React.useRef(0)
+      const [algo, setAlgo] = React.useState('astar')
+      const [seed, setSeed] = React.useState(7)
+      const [stats, setStats] = React.useState(null)
+      const [compare, setCompare] = React.useState(null)
+      const [error, setError] = React.useState('')
+
+      const loadMaze = React.useCallback((nextSeed) => {
+        setError('')
+        setCompare(null)
+        resultRef.current = null
+        progressRef.current = 0
+        fetch(API + '/search/maze', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ cols: 31, rows: 21, seed: nextSeed }),
+        })
+          .then((response) => (response.ok ? response.json() : Promise.reject(new Error('HTTP ' + response.status))))
+          .then((maze) => {
+            mazeRef.current = maze
+            setStats(null)
+          })
+          .catch((err) => setError(err.message))
+      }, [])
+
+      React.useEffect(() => {
+        loadMaze(seed)
+      }, [seed, loadMaze])
+
+      const runSearch = React.useCallback(
+        (nextAlgo) => {
+          const maze = mazeRef.current
+          if (!maze) return
+          setError('')
+          setCompare(null)
+          fetch(API + '/search/solve', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              cols: maze.cols,
+              rows: maze.rows,
+              walls: maze.walls,
+              start: maze.start,
+              end: maze.end,
+              algo: nextAlgo,
+            }),
+          })
+            .then((response) => (response.ok ? response.json() : Promise.reject(new Error('HTTP ' + response.status))))
+            .then((result) => {
+              resultRef.current = result
+              progressRef.current = 0
+              setStats(result)
+            })
+            .catch((err) => setError(err.message))
+        },
+        [],
+      )
+
+      const runCompare = React.useCallback(() => {
+        const maze = mazeRef.current
+        if (!maze) return
+        setError('')
+        fetch(API + '/search/compare', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            cols: maze.cols,
+            rows: maze.rows,
+            walls: maze.walls,
+            start: maze.start,
+            end: maze.end,
+          }),
+        })
+          .then((response) => (response.ok ? response.json() : Promise.reject(new Error('HTTP ' + response.status))))
+          .then((data) => {
+            setCompare(data)
+            resultRef.current = data.detail[algo] || data.detail.astar
+            progressRef.current = Infinity
+          })
+          .catch((err) => setError(err.message))
+      }, [algo])
+
+      React.useEffect(() => {
+        runSearch(algo)
+      }, [algo, seed, runSearch])
+
+      React.useEffect(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return undefined
+        const ctx = canvas.getContext('2d')
+        let raf = 0
+        let width = 0
+        let height = 0
+
+        function resize() {
+          const dpr = window.devicePixelRatio || 1
+          width = canvas.clientWidth || 620
+          height = canvas.clientHeight || 380
+          canvas.width = Math.round(width * dpr)
+          canvas.height = Math.round(height * dpr)
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        }
+        resize()
+        const observer = new ResizeObserver(resize)
+        observer.observe(canvas)
+
+        function draw() {
+          const maze = mazeRef.current
+          ctx.clearRect(0, 0, width, height)
+          if (!maze) {
+            raf = requestAnimationFrame(draw)
+            return
+          }
+
+          const cell = Math.min(width / maze.cols, (height - 6) / maze.rows)
+          const padX = (width - cell * maze.cols) / 2
+          const padY = (height - cell * maze.rows) / 2
+          const px = (i) => padX + (i % maze.cols) * cell
+          const py = (i) => padY + Math.floor(i / maze.cols) * cell
+
+          ctx.fillStyle = 'rgba(255,255,255,0.015)'
+          ctx.fillRect(padX, padY, cell * maze.cols, cell * maze.rows)
+
+          for (let i = 0; i < maze.walls.length; i++) {
+            if (maze.walls[i]) {
+              ctx.fillStyle = 'rgba(255,255,255,0.09)'
+              ctx.fillRect(px(i) + 0.5, py(i) + 0.5, cell - 1, cell - 1)
+            }
+          }
+
+          const result = resultRef.current
+          if (result && result.order) {
+            const total = result.order.length
+            const shown = Math.min(total, progressRef.current)
+            for (let k = 0; k < shown; k++) {
+              const i = result.order[k]
+              const t = total > 1 ? k / (total - 1) : 1
+              ctx.fillStyle = 'hsla(' + (198 + 96 * t) + ', 82%, ' + (26 + 26 * t) + '%, 0.55)'
+              ctx.fillRect(px(i) + 0.5, py(i) + 0.5, cell - 1, cell - 1)
+            }
+            if (shown < total) progressRef.current = Math.min(total, shown + 14)
+
+            const path = result.path || []
+            if (path.length > 1 && shown >= total) {
+              ctx.strokeStyle = 'rgba(190,240,255,0.95)'
+              ctx.lineWidth = Math.max(1.4, cell * 0.24)
+              ctx.lineJoin = 'round'
+              ctx.beginPath()
+              path.forEach((i, index) => {
+                const x = px(i) + cell / 2
+                const y = py(i) + cell / 2
+                if (index === 0) ctx.moveTo(x, y)
+                else ctx.lineTo(x, y)
+              })
+              ctx.stroke()
+            }
+          }
+
+          const stroke = (i, color, size) => {
+            ctx.beginPath()
+            ctx.arc(px(i) + cell / 2, py(i) + cell / 2, cell * size, 0, Math.PI * 2)
+            ctx.fillStyle = color
+            ctx.fill()
+          }
+          stroke(maze.start, '#4fb3a3', 0.32)
+          stroke(maze.end, '#eb786e', 0.32)
+
+          raf = requestAnimationFrame(draw)
+        }
+        raf = requestAnimationFrame(draw)
+
+        return () => {
+          cancelAnimationFrame(raf)
+          observer.disconnect()
+        }
+      }, [])
+
+      const fmt = (value) => (typeof value === 'number' ? (Math.abs(value) < 100 ? value.toFixed(2) : String(value)) : '—')
+
+      return h(
+        'div',
+        { className: 'ma-search' },
+        h(
+          'div',
+          { className: 'ma-search-head' },
+          SEARCH_ALGOS.map((item) =>
+            h(
+              'button',
+              {
+                key: item.id,
+                type: 'button',
+                className: 'ma-demo-chip' + (item.id === algo ? ' ma-demo-chip-active' : ''),
+                onClick: () => setAlgo(item.id),
+              },
+              item.label,
+            ),
+          ),
+          h(
+            'button',
+            { type: 'button', className: 'ma-demo-chip', onClick: runCompare },
+            '对比四种',
+          ),
+          h(
+            'button',
+            { type: 'button', className: 'ma-demo-chip', onClick: () => setSeed(Math.floor(Math.random() * 9999)) },
+            '换一张迷宫',
+          ),
+        ),
+        h('canvas', { ref: canvasRef, className: 'ma-search-canvas', 'aria-label': '迷宫寻路' }),
+        error ? h('div', { className: 'ma-error' }, error) : null,
+        stats && !compare
+          ? h(
+              'p',
+              { className: 'ma-search-note' },
+              '访问 ' + stats.visited + ' 格 · 路径代价 ' + fmt(stats.cost) + ' · 步数 ' + stats.steps,
+            )
+          : null,
+        compare
+          ? h(
+              'table',
+              { className: 'ma-quad-table' },
+              h(
+                'thead',
+                null,
+                h('tr', null, h('th', null, '算法'), h('th', null, '访问'), h('th', null, '代价'), h('th', null, '步数'), h('th', null, '最优')),
+              ),
+              h(
+                'tbody',
+                null,
+                compare.runs.map((row) =>
+                  h(
+                    'tr',
+                    { key: row.algo },
+                    h('td', null, row.name),
+                    h('td', null, String(row.visited)),
+                    h('td', null, fmt(row.cost)),
+                    h('td', null, String(row.steps)),
+                    h('td', { className: 'ma-quad-order' }, row.optimal ? '是' : '否'),
+                  ),
+                ),
+              ),
+            )
+          : null,
       )
     }
 
@@ -4547,6 +4905,12 @@ precision mediump float;
 .ma-cloth-gl-on canvas:not(.ma-cloth-gl) { visibility:hidden; }
 .ma-cloth-gpu-on .ma-cloth-gpu { display:block; }
 .ma-cloth-gpu-on canvas:not(.ma-cloth-gpu) { visibility:hidden; }
+.ma-search-head { display:flex; gap:6px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+.ma-search-canvas {
+  display:block; width:100%; height:380px; border-radius:10px;
+  border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.02);
+}
+.ma-search-note { margin:10px 0 0; font-size:12px; color:rgba(231,233,236,.45); font-family:ui-monospace, Consolas, monospace; }
 .ma-quad-head { display:flex; gap:6px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
 .ma-quad-exact { margin-left:auto; font-size:12px; color:rgba(231,233,236,.45); font-family:ui-monospace, Consolas, monospace; }
 .ma-quad-table { width:100%; border-collapse:collapse; font-size:12.5px; font-family:ui-monospace, Consolas, monospace; }
